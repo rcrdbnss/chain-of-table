@@ -56,6 +56,34 @@ def fixed_chain_exec_mp(llm, init_samples, fixed_op_list, n_proc=10, chunk_size=
     return final_result, history
 
 
+# without multiprocessing
+def fixed_chain_exec(llm, init_samples, fixed_op_list):
+    history = {}
+    final_result = None
+
+    chain_header = copy.deepcopy(init_samples)
+    chain_key = ""
+
+    for i, (op_name, solver_func, kargs, llm_kargs) in enumerate(fixed_op_list):
+        chain_key += f"->{op_name}" if i > 0 else op_name
+        chain_header = conduct_single_solver(
+            llm=llm,
+            all_samples=chain_header,
+            solver_func=solver_func,
+            tqdm_tag=op_name,
+            llm_options=llm.get_model_options(
+                **llm_kargs,
+            ),
+            **kargs,
+        )
+
+        history[f"({i}) {chain_key}"] = chain_header
+        if i == len(fixed_op_list) - 1:
+            final_result = chain_header
+
+    return final_result, history
+
+
 def conduct_single_solver(llm, all_samples, solver_func, tqdm_tag=None, **kwargs):
     result_samples = [None for _ in range(len(all_samples))]
 
